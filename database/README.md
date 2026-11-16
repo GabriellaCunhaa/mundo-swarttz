@@ -1,63 +1,53 @@
 # Banco de dados MySQL
 
-Banco **`mundo_swarttz`**, criado a partir do modelo lógico normalizado até a 3FN (`modelo_logico_3fn_brmodelo.pdf`). O detalhe de cada coluna está em `dicionario_dados.md`.
+Banco **`mundo_swarttz`**, com três tabelas normalizadas até a 3FN. Ele guarda só o que vem de quem visita o site: as visitas, as curtidas e as mensagens do formulário de contato. O conteúdo do site continua no `js/config.js`. O detalhe de cada coluna está em `dicionario_dados.md`.
 
 ## Arquivos
 | Arquivo | O que é |
 |---|---|
 | `visao_geral.md` | Visão geral do modelo: entidades, relacionamentos e perfis |
-| `modelo_conceitual.png` / `modelo_conceitual_brmodelo.pdf` | Modelo conceitual (entidades, atributos e cardinalidades) |
-| `modelo_logico.png` | Primeiro modelo lógico (tabelas, PK e FK) |
-| `normalizacao.md` | Normalização até a 3FN, com o antes e o depois de cada mudança |
-| `modelo_logico_3fn.png` / `modelo_logico_3fn_brmodelo.pdf` | Modelo lógico normalizado, usado para criar o banco |
+| `modelo_logico.png` | Modelo lógico: as três tabelas, com tipos, chaves e campos obrigatórios |
+| `normalizacao.md` | Verificação da 1FN, 2FN e 3FN e as mudanças feitas no caminho |
 | `dicionario_dados.md` | Dicionário de dados: cada coluna com tipo e regras |
-| `criar_banco.sql` | Cria o banco e as 12 tabelas (tipos, PK com `AUTO_INCREMENT`, `NOT NULL`, `UNIQUE`, `DEFAULT` e chaves estrangeiras) |
-| `teste_integridade.sql` | Confere se o banco recusa um registro com chave estrangeira inexistente |
-| `schema.sql` | Estrutura do banco exportada do phpMyAdmin |
-| `relacoes_phpmyadmin.png` | Visão de relações (Designer) do banco no phpMyAdmin |
+| `criar_banco.sql` | Cria o banco e as 3 tabelas (tipos, PK com `AUTO_INCREMENT`, `NOT NULL`, `UNIQUE` e `DEFAULT`) |
+| `teste_integridade.sql` | Confere se o banco recusa um segundo voto do mesmo visitante no mesmo projeto |
+| `schema.sql` | Estrutura do banco exportada com `mysqldump`, sem dados |
 
 ## Como criar o banco localmente (XAMPP)
 1. No painel do XAMPP, inicie o **Apache** e o **MySQL**.
 2. Abra `localhost/phpmyadmin`, vá na aba **Importar**, escolha `criar_banco.sql` e clique em **Importar**.
-3. O banco `mundo_swarttz` aparece na lateral, com 12 tabelas.
+3. O banco `mundo_swarttz` aparece na lateral, com 3 tabelas: `curtida`, `mensagem` e `visita`.
 
-O banco usa `utf8mb4_unicode_ci` para aceitar acentos (como em `'em produção'`). Todas as tabelas usam `ENGINE=InnoDB`, o motor que respeita chaves estrangeiras. No MyISAM elas seriam ignoradas.
+O banco usa `utf8mb4_unicode_ci` para aceitar acentos e emojis nas mensagens. Todas as tabelas usam `ENGINE=InnoDB`, o motor padrão do MySQL, que garante as regras de `UNIQUE` e as transações.
 
 ## Tabelas
-`usuario`, `autor`, `tecnologia`, `curtida_site`, `projeto`, `projeto_tecnologia`, `formacao`, `depoimento`, `mensagem`, `comentario`, `visita` e `curtida_projeto`.
+| Tabela | O que guarda |
+|---|---|
+| `visita` | Cada lugar aberto no mundo 3D, e qual projeto no cinema (contador de visitas) |
+| `curtida` | O voto de cada visitante em cada projeto ou no site todo |
+| `mensagem` | As mensagens do formulário de contato |
 
-As tabelas sem chave estrangeira são criadas primeiro, porque uma FK só pode apontar para uma tabela que já existe.
+As tabelas são independentes, sem chaves estrangeiras. Os projetos são identificados pelo `id` que têm no `js/config.js` (ex.: `pixelinha`), e a API confere esse `id` antes de gravar.
 
-## Chaves estrangeiras
-| Chave estrangeira | Aponta para | `ON DELETE` |
-|---|---|---|
-| `projeto.usuario_id` | `usuario.id` | `RESTRICT` |
-| `formacao.usuario_id` | `usuario.id` | `RESTRICT` |
-| `depoimento.usuario_id` | `usuario.id` | `RESTRICT` |
-| `depoimento.autor_id` | `autor.id` | `RESTRICT` |
-| `projeto_tecnologia.projeto_id` | `projeto.id` | `CASCADE` |
-| `projeto_tecnologia.tecnologia_id` | `tecnologia.id` | `CASCADE` |
-| `curtida_projeto.projeto_id` | `projeto.id` | `CASCADE` |
-| `mensagem.respondida_por` | `usuario.id` | `SET NULL` |
-| `comentario.moderado_por` | `usuario.id` | `SET NULL` |
-| `visita.projeto_id` | `projeto.id` | `SET NULL` |
+## Teste de integridade: um voto por alvo
+A regra `UNIQUE (visitante, alvo)` da tabela `curtida` garante que o mesmo navegador não vote duas vezes no mesmo projeto. `teste_integridade.sql` faz três coisas:
 
-## Teste de integridade referencial
-Com a tabela `usuario` vazia, `teste_integridade.sql` tenta cadastrar um projeto do usuário `999`, que não existe:
+1. Grava uma curtida no projeto `pixelinha`. **O MySQL aceita.**
+2. Troca o voto para descurtida com `INSERT ... ON DUPLICATE KEY UPDATE`, que é o jeito que a API grava os votos. A tabela continua com **uma linha só**.
+3. Tenta gravar um **segundo** voto do mesmo visitante no mesmo projeto:
 
 ```sql
-INSERT INTO projeto (usuario_id, titulo, slug)
-VALUES (999, 'Projeto sem dono', 'projeto-sem-dono');
+INSERT INTO curtida (visitante, alvo, tipo)
+VALUES ('a1b2c3d4-0000-4000-8000-000000000001', 'pixelinha', 'curtir');
 ```
 
-**Resultado esperado: o MySQL recusa.** O erro abaixo é o sinal de que a chave estrangeira está funcionando:
+**Resultado esperado: o MySQL recusa.** O erro abaixo é o sinal de que a regra está funcionando:
 
 ```
-#1452 - Cannot add or update a child row: a foreign key constraint fails
-(`mundo_swarttz`.`projeto`, CONSTRAINT `fk_projeto_usuario`
-FOREIGN KEY (`usuario_id`) REFERENCES `usuario` (`id`))
+#1062 - Duplicate entry 'a1b2c3d4-0000-4000-8000-000000000001-pixelinha'
+for key 'uq_curtida_visitante_alvo'
 ```
 
-O erro quer dizer: não dá para adicionar a linha filha (o projeto), porque a chave estrangeira `fk_projeto_usuario` não encontrou a linha mãe (o usuário 999). Assim o banco nunca guarda um projeto sem dono.
+O erro quer dizer: já existe uma linha com esse mesmo par (visitante, alvo). Assim o banco nunca guarda dois votos da mesma pessoa no mesmo projeto, e a contagem de curtidas não pode ser inflada.
 
-Se esse `INSERT` for **aceito**, há um problema: a tabela não está em InnoDB ou a chave estrangeira não foi criada.
+Se esse `INSERT` for **aceito**, há um problema: o `UNIQUE` não foi criado.

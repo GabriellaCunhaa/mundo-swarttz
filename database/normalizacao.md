@@ -1,7 +1,6 @@
 # Normalização do banco do Mundo Swarttz (até a 3FN)
 
-Ponto de partida: o primeiro modelo lógico (`modelo_conceitual.png` e `modelo_logico.png`, que seguem `docs/BANCO-DE-DADOS.md`).
-Resultado: `modelo_logico_3fn.png`, com o detalhe de cada coluna em `dicionario_dados.md`.
+O modelo tem três tabelas: `visita`, `curtida` e `mensagem` (detalhe de cada coluna em `dicionario_dados.md`). Este documento confere cada uma contra as três formas normais e registra as mudanças feitas no caminho.
 
 ## As três formas normais, em uma linha cada
 - **1FN:** cada célula guarda **um valor só** (nada de listas separadas por vírgula) e toda tabela tem chave primária.
@@ -10,82 +9,39 @@ Resultado: `modelo_logico_3fn.png`, com o detalhe de cada coluna em `dicionario_
 
 ---
 
-## Problema 1: tecnologias numa coluna de texto (viola a 1FN)
+## Verificação da 1FN
 
-No desenho original do banco, as tecnologias de cada projeto ficavam numa coluna só, separadas por vírgula. Isso foi encontrado ao montar o primeiro DER, que já saiu com a correção. O antes e o depois ficam registrados aqui.
-
-**Antes:**
-
-| id | titulo | tecnologias |
+| Tabela | Chave primária | Alguma coluna com lista de valores? |
 |---|---|---|
-| 1 | Mundo Swarttz | HTML, CSS, JavaScript, three.js |
-| 2 | PixeLinha | React, Python |
+| visita | `id` | Não. Cada visita tem um lugar, no máximo um projeto e um dispositivo. |
+| curtida | `id` | Não. Cada voto tem um alvo e um tipo. |
+| mensagem | `id` | Não. Cada mensagem tem um remetente, um e-mail e um texto. |
 
-**Por que é um problema:** a célula guarda vários valores, o que quebra a 1FN. Fica difícil buscar "todos os projetos com React", e o mesmo nome pode ser escrito de jeitos diferentes ("JS" e "JavaScript").
+As três tabelas estão na 1FN.
 
-**Depois:** a relação é N:N (um projeto usa várias tecnologias, e uma tecnologia aparece em vários projetos). Por isso ela foi resolvida com a tabela `tecnologia` e a tabela associativa `projeto_tecnologia`.
+## Verificação da 2FN
 
-`projeto`
+A 2FN só pode ser violada em tabelas com **chave primária composta**. As três tabelas usam um `id` simples como chave, então nenhuma coluna pode depender "só de um pedaço" dela. As três estão na 2FN.
 
-| id | titulo |
-|---|---|
-| 1 | Mundo Swarttz |
-| 2 | PixeLinha |
+A regra de um voto por visitante em cada alvo, em `curtida`, é garantida com `UNIQUE (visitante, alvo)`, e não com uma chave primária composta. Assim a tabela mantém o `id` simples, e a regra continua valendo.
 
-`tecnologia`
+## Verificação da 3FN
 
-| id | nome |
-|---|---|
-| 1 | HTML |
-| 2 | React |
-| 3 | Python |
+A pergunta é: alguma coluna depende de outra coluna que não é a chave?
 
-`projeto_tecnologia`
+- **visita:** `lugar`, `projeto`, `dispositivo` e `criada_em` descrevem aquela visita. O lugar não determina o projeto (no cinema pode ser qualquer filme), e o visitante não determina o dispositivo (a mesma pessoa pode voltar pelo celular). Nenhuma dependência transitiva.
+- **curtida:** `alvo`, `tipo` e `atualizada_em` descrevem aquele voto. Nenhuma coluna é calculada a partir de outra.
+- **mensagem:** `nome`, `email`, `assunto`, `texto` e `status` descrevem aquela mensagem. Pode parecer que `email → nome` (o e-mail "decide" o nome), mas o formulário é aberto: a mesma pessoa pode escrever o nome de jeitos diferentes, ou duas pessoas podem usar o mesmo e-mail. Não há um cadastro de remetentes, e cada mensagem guarda o que foi enviado naquela vez.
 
-| projeto_id | tecnologia_id |
-|---|---|
-| 1 | 1 |
-| 2 | 2 |
-| 2 | 3 |
+As três tabelas estão na 3FN.
 
 ---
 
-## Problema 2: dados do autor repetidos em cada depoimento (viola a 3FN)
+## Mudanças feitas no caminho
 
-No primeiro modelo, a tabela `depoimento` guardava o nome, a relação e a foto de quem escreveu.
+### Problema: coluna calculada nas curtidas (violava a 3FN)
 
-**Antes:** `depoimento`
-
-| id | autor | relacao | foto | texto |
-|---|---|---|---|---|
-| 1 | Ana Lima | Colega de curso técnico | ana.jpg | "A Gabi sempre…" |
-| 2 | Ana Lima | Colega de curso técnico | ana.jpg | "No projeto da…" |
-| 3 | Bruno Reis | Professor | bruno.jpg | "Aluna dedicada…" |
-
-**Por que é um problema:** `relacao` e `foto` dependem de **quem é o autor**, não do depoimento. A dependência é `id → autor → relacao, foto`, ou seja, transitiva, o que quebra a 3FN. Se a Ana trocar de foto, é preciso alterar todas as linhas dela, e se esquecer uma, o banco fica com duas fotos diferentes para a mesma pessoa.
-
-**Depois:** os dados do autor foram para a tabela nova `autor`. O depoimento só aponta para ela com `autor_id`.
-
-`autor`
-
-| id | nome | relacao | foto |
-|---|---|---|---|
-| 1 | Ana Lima | Colega de curso técnico | ana.jpg |
-| 2 | Bruno Reis | Professor | bruno.jpg |
-
-`depoimento`
-
-| id | autor_id | texto |
-|---|---|---|
-| 1 | 1 | "A Gabi sempre…" |
-| 2 | 1 | "No projeto da…" |
-| 3 | 2 | "Aluna dedicada…" |
-
----
-
-## Problema 3: coluna calculada e dois tipos de voto na mesma tabela de curtidas (viola a 3FN)
-
-No primeiro modelo, a tabela `curtida` guardava os votos do site todo (com `projeto_id` vazio) e os votos de cada projeto. Ela também tinha a coluna `alvo`, calculada a partir de `projeto_id`, só para conseguir impedir votos repetidos.
+Num modelo anterior, a tabela `curtida` usava `projeto_id` vazio para o voto no site todo, e precisava de uma coluna `alvo` calculada a partir dele (`projeto_id` ou 0), só para conseguir impedir votos repetidos.
 
 **Antes:** `curtida`
 
@@ -93,35 +49,26 @@ No primeiro modelo, a tabela `curtida` guardava os votos do site todo (com `proj
 |---|---|---|---|---|
 | 1 | a1b2c3 | *(vazio)* | 0 | curtir |
 | 2 | a1b2c3 | 2 | 2 | curtir |
-| 3 | f9e8d7 | 2 | 2 | descurtir |
 
-**Por que é um problema:** `alvo` depende de `projeto_id`, que não é chave. A dependência é `id → projeto_id → alvo`, ou seja, transitiva, o que quebra a 3FN. É um dado repetido que pode ficar diferente do original. Além disso, a mesma coluna `projeto_id` significa duas coisas diferentes ("site todo" quando está vazia, "projeto" quando tem número).
+**Por que era um problema:** `alvo` dependia de `projeto_id`, que não é chave (`id → projeto_id → alvo`): uma dependência transitiva. Era um dado repetido que podia ficar diferente do original.
 
-**Depois:** a tabela foi separada em duas, uma para cada tipo de voto. Assim, `alvo` deixa de ser necessária e `projeto_id` passa a ser obrigatória.
+**Depois:** sobrou só a coluna `alvo`, que é obrigatória e guarda diretamente o que foi votado: o `id` do projeto ou a palavra `site`. Não existe mais coluna calculada, e o `UNIQUE (visitante, alvo)` funciona sem truques.
 
-`curtida_site` (um voto por visitante: `visitante` é UNIQUE)
+**Depois:** `curtida`
 
-| id | visitante | tipo |
-|---|---|---|
-| 1 | a1b2c3 | curtir |
-
-`curtida_projeto` (um voto por visitante em cada projeto: `UNIQUE (visitante, projeto_id)`)
-
-| id | visitante | projeto_id | tipo |
+| id | visitante | alvo | tipo |
 |---|---|---|---|
-| 1 | a1b2c3 | 2 | curtir |
-| 2 | f9e8d7 | 2 | descurtir |
+| 1 | a1b2c3 | site | curtir |
+| 2 | a1b2c3 | pixelinha | curtir |
 
----
+### Simplificação: o conteúdo saiu do banco
 
-## Verificação da 2FN
+O modelo anterior também tinha tabelas para o conteúdo do site (projetos, tecnologias, formações, depoimentos e autores) e para os usuários do painel. Elas foram retiradas porque o conteúdo continua no `js/config.js` e o painel tem uma única administradora. O motivo completo está na seção "Decisões tomadas" de [`docs/BANCO-DE-DADOS.md`](../docs/BANCO-DE-DADOS.md).
 
-A 2FN só pode ser violada em tabelas com **chave primária composta**. No modelo, a única é `projeto_tecnologia` (`projeto_id` + `tecnologia_id`). Ela não tem nenhuma coluna além da chave, então nenhuma coluna pode depender só de um pedaço dela. Todas as outras tabelas usam um `id` simples como chave, então já estão na 2FN.
+## Resumo
 
-## Resumo das mudanças
-
-| Mudança | Forma normal |
-|---|---|
-| `projeto.tecnologias` → tabelas `tecnologia` + `projeto_tecnologia` | 1FN (corrigida já no primeiro DER) |
-| `depoimento.autor`, `relacao`, `foto` → tabela `autor` + `depoimento.autor_id` | 3FN |
-| `curtida` (com `alvo`) → tabelas `curtida_site` + `curtida_projeto` | 3FN |
+| Tabela | 1FN | 2FN | 3FN |
+|---|---|---|---|
+| visita | ✓ | ✓ | ✓ |
+| curtida | ✓ | ✓ | ✓ |
+| mensagem | ✓ | ✓ | ✓ |
