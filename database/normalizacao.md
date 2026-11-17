@@ -14,7 +14,7 @@ O modelo tem três tabelas: `visita`, `curtida` e `mensagem` (detalhe de cada co
 | Tabela | Chave primária | Alguma coluna com lista de valores? |
 |---|---|---|
 | visita | `id` | Não. Cada visita tem um lugar, no máximo um projeto e um dispositivo. |
-| curtida | `id` | Não. Cada voto tem um alvo e um tipo. |
+| curtida | `id` | Não. Cada voto tem um projeto e um tipo. |
 | mensagem | `id` | Não. Cada mensagem tem um remetente, um e-mail e um texto. |
 
 As três tabelas estão na 1FN.
@@ -23,14 +23,14 @@ As três tabelas estão na 1FN.
 
 A 2FN só pode ser violada em tabelas com **chave primária composta**. As três tabelas usam um `id` simples como chave, então nenhuma coluna pode depender "só de um pedaço" dela. As três estão na 2FN.
 
-A regra de um voto por visitante em cada alvo, em `curtida`, é garantida com `UNIQUE (visitante, alvo)`, e não com uma chave primária composta. Assim a tabela mantém o `id` simples, e a regra continua valendo.
+A regra de um voto por visitante em cada projeto, em `curtida`, é garantida com `UNIQUE (visitante, projeto)`, e não com uma chave primária composta. Assim a tabela mantém o `id` simples, e a regra continua valendo.
 
 ## Verificação da 3FN
 
 A pergunta é: alguma coluna depende de outra coluna que não é a chave?
 
 - **visita:** `lugar`, `projeto`, `dispositivo` e `criada_em` descrevem aquela visita. O lugar não determina o projeto (no cinema pode ser qualquer filme), e o visitante não determina o dispositivo (a mesma pessoa pode voltar pelo celular). Nenhuma dependência transitiva.
-- **curtida:** `alvo`, `tipo` e `atualizada_em` descrevem aquele voto. Nenhuma coluna é calculada a partir de outra.
+- **curtida:** `projeto`, `tipo` e `atualizada_em` descrevem aquele voto. Nenhuma coluna é calculada a partir de outra.
 - **mensagem:** `nome`, `email`, `assunto`, `texto` e `status` descrevem aquela mensagem. Pode parecer que `email → nome` (o e-mail "decide" o nome), mas o formulário é aberto: a mesma pessoa pode escrever o nome de jeitos diferentes, ou duas pessoas podem usar o mesmo e-mail. Não há um cadastro de remetentes, e cada mensagem guarda o que foi enviado naquela vez.
 
 As três tabelas estão na 3FN.
@@ -52,13 +52,13 @@ Num modelo anterior, a tabela `curtida` usava `projeto_id` vazio para o voto no 
 
 **Por que era um problema:** `alvo` dependia de `projeto_id`, que não é chave (`id → projeto_id → alvo`): uma dependência transitiva. Era um dado repetido que podia ficar diferente do original.
 
-**Depois:** sobrou só a coluna `alvo`, que é obrigatória e guarda diretamente o que foi votado: o `id` do projeto ou a palavra `site`. Não existe mais coluna calculada, e o `UNIQUE (visitante, alvo)` funciona sem truques.
+**Depois:** o voto passou a ser só nos projetos do portfólio. Sobrou uma coluna `projeto`, obrigatória, com o `id` do projeto votado. Não existe mais coluna calculada nem campo vazio com significado especial, e o `UNIQUE (visitante, projeto)` funciona sem truques.
 
 **Depois:** `curtida`
 
-| id | visitante | alvo | tipo |
+| id | visitante | projeto | tipo |
 |---|---|---|---|
-| 1 | a1b2c3 | site | curtir |
+| 1 | a1b2c3 | mundo | curtir |
 | 2 | a1b2c3 | pixelinha | curtir |
 
 ### Simplificação: o conteúdo saiu do banco

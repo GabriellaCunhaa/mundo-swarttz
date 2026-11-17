@@ -24,20 +24,20 @@ O banco usa `utf8mb4_unicode_ci` para aceitar acentos e emojis nas mensagens. To
 | Tabela | O que guarda |
 |---|---|
 | `visita` | Cada lugar aberto no mundo 3D, e qual projeto no cinema (contador de visitas) |
-| `curtida` | O voto de cada visitante em cada projeto ou no site todo |
+| `curtida` | O voto de cada visitante em cada projeto do portfólio |
 | `mensagem` | As mensagens do formulário de contato |
 
 As tabelas são independentes, sem chaves estrangeiras. Os projetos são identificados pelo `id` que têm no `js/config.js` (ex.: `pixelinha`), e a API confere esse `id` antes de gravar.
 
-## Teste de integridade: um voto por alvo
-A regra `UNIQUE (visitante, alvo)` da tabela `curtida` garante que o mesmo navegador não vote duas vezes no mesmo projeto. `teste_integridade.sql` faz três coisas:
+## Teste de integridade: um voto por projeto
+A regra `UNIQUE (visitante, projeto)` da tabela `curtida` garante que o mesmo navegador não vote duas vezes no mesmo projeto. `teste_integridade.sql` faz três coisas:
 
 1. Grava uma curtida no projeto `pixelinha`. **O MySQL aceita.**
 2. Troca o voto para descurtida com `INSERT ... ON DUPLICATE KEY UPDATE`, que é o jeito que a API grava os votos. A tabela continua com **uma linha só**.
 3. Tenta gravar um **segundo** voto do mesmo visitante no mesmo projeto:
 
 ```sql
-INSERT INTO curtida (visitante, alvo, tipo)
+INSERT INTO curtida (visitante, projeto, tipo)
 VALUES ('a1b2c3d4-0000-4000-8000-000000000001', 'pixelinha', 'curtir');
 ```
 
@@ -45,9 +45,9 @@ VALUES ('a1b2c3d4-0000-4000-8000-000000000001', 'pixelinha', 'curtir');
 
 ```
 #1062 - Duplicate entry 'a1b2c3d4-0000-4000-8000-000000000001-pixelinha'
-for key 'uq_curtida_visitante_alvo'
+for key 'uq_curtida_visitante_projeto'
 ```
 
-O erro quer dizer: já existe uma linha com esse mesmo par (visitante, alvo). Assim o banco nunca guarda dois votos da mesma pessoa no mesmo projeto, e a contagem de curtidas não pode ser inflada.
+O erro quer dizer: já existe uma linha com esse mesmo par (visitante, projeto). Assim o banco nunca guarda dois votos da mesma pessoa no mesmo projeto, e a contagem de curtidas não pode ser inflada.
 
 Se esse `INSERT` for **aceito**, há um problema: o `UNIQUE` não foi criado.
