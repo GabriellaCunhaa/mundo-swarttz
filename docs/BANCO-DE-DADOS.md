@@ -11,7 +11,7 @@ O conteúdo do site (projetos, formações, depoimentos, contatos) continua escr
 O banco MySQL guarda só o que um site estático **não consegue** guardar sozinho, porque vem de quem visita:
 
 1. **Contador de visitas:** o site registra, sem identificar ninguém, quantas pessoas visitaram e quais lugares do mundo 3D e quais projetos foram mais abertos.
-2. **Curtir e descurtir:** quem visita pode curtir ou descurtir cada projeto (e o site todo). O número de curtidas aparece para todos; o de descurtidas, só no painel.
+2. **Curtir e descurtir:** quem visita pode curtir ou descurtir cada projeto do portfólio. O número de curtidas aparece para todos; o de descurtidas, só no painel.
 3. **Formulário de contato:** quem visita manda uma mensagem pelo site; ela fica guardada no banco e aparece no painel.
 
 Um **painel admin**, de uso só da Gabriella, mostra esses números e as mensagens.
@@ -29,7 +29,7 @@ O mundo 3D continua funcionando mesmo se o servidor estiver fora do ar: o conte�
 | RF01 | A administradora entra no painel com e-mail e senha. |
 | RF02 | Cada lugar aberto no mundo 3D (cinema, biblioteca, cartas…) gera um registro de visita; no cinema, o registro diz qual projeto foi aberto. |
 | RF03 | O painel mostra visitas por dia, visitantes únicos, lugares e projetos mais abertos, e celular × computador. |
-| RF04 | O visitante curte ou descurte **cada projeto** e o **site todo**: um voto por alvo, que ele pode trocar ou desfazer. |
+| RF04 | O visitante curte ou descurte **cada projeto** do portfólio: um voto por projeto, que ele pode trocar ou desfazer. |
 | RF05 | O site mostra o **número de curtidas**. O número de descurtidas aparece **só no painel**. |
 | RF06 | O visitante envia uma mensagem pelo formulário de contato (nome, e-mail, assunto, mensagem). |
 | RF07 | No painel, as mensagens aparecem como **nova**, **lida** ou **respondida**. |
@@ -88,7 +88,7 @@ erDiagram
     curtida {
         bigint id PK
         char visitante
-        varchar alvo
+        varchar projeto
         enum tipo
         datetime atualizada_em
     }
@@ -120,17 +120,17 @@ Cada linha é **um lugar aberto** por um visitante. "Visitantes únicos" = quant
 
 ### 4.2 `curtida`: curtir e descurtir
 
-Cada linha é **o voto de um visitante** em um alvo. O `alvo` é o `id` do projeto (ex.: `pixelinha`) ou a palavra `site`, para o voto no site todo. Se o visitante troca de ideia, a linha é atualizada; se desfaz, a linha é apagada.
+Cada linha é **o voto de um visitante** em um projeto do portfólio. A coluna `projeto` guarda o `id` do projeto (ex.: `pixelinha`). Se o visitante troca de ideia, a linha é atualizada; se desfaz, a linha é apagada.
 
 | Coluna | Tipo | Regra | Para que serve |
 |---|---|---|---|
 | id | BIGINT | PK, auto incremento | identifica o voto |
 | visitante | CHAR(36) | obrigatório | código aleatório do navegador |
-| alvo | VARCHAR(30) | obrigatório | `id` do projeto votado, ou `site` |
+| projeto | VARCHAR(30) | obrigatório | `id` do projeto votado (ex.: `pixelinha`) |
 | tipo | ENUM('curtir','descurtir') | obrigatório | o voto |
 | atualizada_em | DATETIME | atualiza sozinho | quando votou ou trocou |
 
-Regra: **(visitante, alvo) é único**. Isso impede o mesmo navegador de votar duas vezes no mesmo alvo.
+Regra: **(visitante, projeto) é único**. Isso impede o mesmo navegador de votar duas vezes no mesmo projeto.
 
 ### 4.3 `mensagem`: formulário de contato
 
@@ -169,9 +169,9 @@ Três linhas de exemplo em cada tabela.
 
 **Tabela `curtida`**
 
-| id | visitante | alvo | tipo |
+| id | visitante | projeto | tipo |
 |---|---|---|---|
-| 1 | a1b2c3 | site | curtir |
+| 1 | a1b2c3 | mundo | curtir |
 | 2 | a1b2c3 | pixelinha | curtir |
 | 3 | f9e8d7 | pixelinha | descurtir |
 
@@ -196,7 +196,7 @@ Os códigos de visitante aparecem curtos só para facilitar a leitura (no banco 
 | Login do painel | **Variáveis de ambiente, sem tabela de usuários** | Só a Gabriella entra no painel. Uma tabela com perfis e permissões teria sempre uma linha só. |
 | Comentários | **Fora do projeto** | O formulário de contato já cobre o feedback de quem visita, sem precisar de moderação. |
 | Sem chaves estrangeiras | **Projetos identificados pelo `id` do `config.js`** | Como os projetos não estão no banco, não há tabela para a chave estrangeira apontar. A API confere o `id` antes de gravar. |
-| Curtidas numa tabela só | **`curtida` com a coluna `alvo`** | O voto no site todo e o voto em cada projeto têm as mesmas colunas; `alvo = 'site'` diferencia os dois. Cada linha continua com um valor só por coluna, e a regra de um voto por alvo vira um `UNIQUE (visitante, alvo)`. |
+| Curtidas só nos projetos | **`curtida` com a coluna `projeto`** | O voto é sempre em um projeto do portfólio, e a regra de um voto por projeto vira um `UNIQUE (visitante, projeto)`. |
 | Onde roda o banco | **TiDB Cloud Starter** | Grátis, sem cartão, compatível com MySQL. O plano grátis de MySQL puro da Aiven foi encerrado para novos bancos. |
 | Onde roda a API | **Render** (grátis) | O painel é de uso da própria Gabriella, e o visitante passa um tempo andando antes de usar o formulário. O atraso de "acordar" afeta só o contador e as curtidas, o que é aceitável. |
 

@@ -11,7 +11,7 @@ Os arquivos desta pasta (dicionário de dados e scripts SQL) estão listados no 
 | Entidade | O que guarda |
 |---|---|
 | **visita** | Cada lugar aberto no mundo 3D (e qual projeto, no cinema), para o contador de visitas |
-| **curtida** | As curtidas e descurtidas de cada projeto e do site todo |
+| **curtida** | As curtidas e descurtidas de cada projeto do portfólio |
 | **mensagem** | As mensagens do formulário de contato |
 
 ## Relacionamentos
