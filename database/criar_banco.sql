@@ -25,16 +25,16 @@ CREATE TABLE visita (
   CONSTRAINT pk_visita PRIMARY KEY (id)
 ) ENGINE=InnoDB;
 
--- Curtir e descurtir: um voto por visitante em cada alvo
--- (alvo = id do projeto no config.js, ou 'site' para o site todo).
+-- Curtir e descurtir: um voto por visitante em cada projeto do portfólio
+-- (projeto = id do projeto no config.js, ex.: 'pixelinha').
 CREATE TABLE curtida (
   id             BIGINT      NOT NULL AUTO_INCREMENT,
   visitante      CHAR(36)    NOT NULL,
-  alvo           VARCHAR(30) NOT NULL,
+  projeto        VARCHAR(30) NOT NULL,
   tipo           ENUM('curtir','descurtir') NOT NULL,
   atualizada_em  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT pk_curtida PRIMARY KEY (id),
-  CONSTRAINT uq_curtida_visitante_alvo UNIQUE (visitante, alvo)
+  CONSTRAINT uq_curtida_visitante_projeto UNIQUE (visitante, projeto)
 ) ENGINE=InnoDB;
 
 -- Formulário de contato.

@@ -23,11 +23,11 @@ DROP TABLE IF EXISTS `curtida`;
 CREATE TABLE `curtida` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `visitante` char(36) NOT NULL,
-  `alvo` varchar(30) NOT NULL,
+  `projeto` varchar(30) NOT NULL,
   `tipo` enum('curtir','descurtir') NOT NULL,
   `atualizada_em` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_curtida_visitante_alvo` (`visitante`,`alvo`)
+  UNIQUE KEY `uq_curtida_visitante_projeto` (`visitante`,`projeto`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 DROP TABLE IF EXISTS `mensagem`;
