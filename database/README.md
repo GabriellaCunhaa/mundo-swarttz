@@ -32,14 +32,6 @@ O banco usa `utf8mb4_unicode_ci` para aceitar acentos e emojis nas mensagens. To
 
 As tabelas são independentes, sem chaves estrangeiras. Os projetos são identificados pelo `id` que têm no `js/config.js` (ex.: `pixelinha`), e a API confere esse `id` antes de gravar.
 
-## UPDATE e DELETE com segurança
-No `dados.sql`, todo `UPDATE` e `DELETE` tem `WHERE` e vem entre dois `SELECT` com o **mesmo** `WHERE`. O primeiro mostra exatamente quais linhas vão mudar; o segundo confirma o resultado. Sem o `WHERE`, o comando mudaria a tabela inteira.
-
-| Comando | WHERE | Antes | Depois |
-|---|---|---|---|
-| `UPDATE mensagem SET status = 'lida'` | `WHERE id = 3` | 1 linha, status `nova` | status `lida` |
-| `DELETE FROM curtida` | `WHERE visitante = '...004' AND projeto = 'preco'` | 1 linha | nenhuma linha |
-
 ## Teste de integridade: um voto por projeto
 A regra `UNIQUE (visitante, projeto)` da tabela `curtida` garante que o mesmo navegador não vote duas vezes no mesmo projeto. `teste_integridade.sql` faz três coisas:
 
